@@ -30,3 +30,4 @@
 - Architecture diagrams: they belong in the Devpost write-up, not the video.
 - "Built with ADK" callouts: judges already read the Devpost form for the stack.
 - Multiple failure modes: pick MEMORY_LEAK, stop. Showing two = confusing.
+

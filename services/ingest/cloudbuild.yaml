@@ -1,0 +1,28 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/ingest-service:${COMMIT_SHA}', '-f', 'services/ingest/Dockerfile', '.']
+  
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/ingest-service:${COMMIT_SHA}']
+    
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ingest-service'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/ingest-service:${COMMIT_SHA}'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${_GCS_BUCKET},PUBSUB_TOPIC=${_PUBSUB_TOPIC},DEPLOYMENT_ENV=demo'
+      - '--set-secrets'
+      - 'DT_TENANT=dynatrace-tenant:latest,DYNATRACE_API_TOKEN=dynatrace-token:latest'
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/ingest-service:${COMMIT_SHA}'

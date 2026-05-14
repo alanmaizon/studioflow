@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+google-cloud-storage
+google-cloud-firestore
+google-cloud-pubsub
+opentelemetry-instrumentation-fastapi
+# Install observability directly from the local directory instead of via relative path
+./observability
