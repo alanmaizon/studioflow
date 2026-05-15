@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+google-adk>=1.10.0
+mcp>=1.0.0
+google-cloud-firestore>=2.16.0
+python-dotenv>=1.0.0
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp
+./observability

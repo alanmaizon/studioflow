@@ -38,6 +38,14 @@ deploy_one() {
   local service="$1"
   local subs="$SHARED_SUBS"
   [[ "$service" == "ingest" ]] && subs="$INGEST_SUBS"
+  if [[ "$service" == "agent" ]]; then
+    local wf_url
+    wf_url=$(gcloud run services describe workflow-service --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)' 2>/dev/null || true)
+    if [[ -z "$wf_url" ]]; then
+      echo "WARN: workflow-service is not deployed; agent's WORKFLOW_URL will be empty." >&2
+    fi
+    subs="${subs},_WORKFLOW_URL=${wf_url}"
+  fi
 
   echo
   echo "=== deploying $service (SHA=$SHA) ==="
@@ -48,7 +56,7 @@ deploy_one() {
 }
 
 case "${1:-}" in
-  ingest|workflow|encode|frontend)
+  ingest|workflow|encode|frontend|agent)
     deploy_one "$1"
     ;;
   all)
@@ -56,16 +64,17 @@ case "${1:-}" in
     deploy_one workflow
     deploy_one encode
     deploy_one frontend
+    deploy_one agent
     ;;
   *)
-    echo "Usage: $0 {ingest|workflow|encode|frontend|all}" >&2
+    echo "Usage: $0 {ingest|workflow|encode|frontend|agent|all}" >&2
     exit 2
     ;;
 esac
 
 echo
 echo "✅ Deploy complete. Service URLs:"
-for svc in ingest workflow encode frontend; do
+for svc in ingest workflow encode frontend agent; do
   url=$(gcloud run services describe "${svc}-service" --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)' 2>/dev/null || echo "(not deployed)")
   printf "  %-10s %s\n" "$svc:" "$url"
 done

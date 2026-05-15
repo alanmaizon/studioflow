@@ -1,0 +1,38 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/agent-service:${COMMIT_SHA}', '-f', 'services/agent/Dockerfile', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/agent-service:${COMMIT_SHA}']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'agent-service'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/agent-service:${COMMIT_SHA}'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--concurrency'
+      - '4'
+      - '--timeout'
+      - '600s'
+      - '--set-env-vars'
+      - 'PROJECT_ID=${PROJECT_ID},DEPLOYMENT_ENV=demo,VERTEX_LOCATION=global,WORKFLOW_URL=${_WORKFLOW_URL}'
+      - '--set-secrets'
+      - 'DT_TENANT=dynatrace-tenant:latest,DT_TOKEN=dynatrace-token:latest,DYNATRACE_API_TOKEN=dynatrace-otlp-token:latest'
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/agent-service:${COMMIT_SHA}'
+
+# deploy.sh sends a shared substitution set; ALLOW_LOOSE so _PUBSUB_TOPIC etc.
+# can be passed without rejection. _WORKFLOW_URL must be substituted in.
+options:
+  substitution_option: ALLOW_LOOSE
