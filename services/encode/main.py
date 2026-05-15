@@ -83,12 +83,13 @@ def handle_pubsub_message(envelope: PubSubMessage):
 
     with _active_encodes_lock:
         active_encodes += 1
-        current_active = active_encodes
+        joined_at = active_encodes
+    logger.info("ENC enter: asset=%s joined_at=%d", asset_id, joined_at)
     try:
         with tracer.start_as_current_span("encode_asset") as span:
             span.set_attribute("asset.id", asset_id)
             span.set_attribute("event.type", event_type)
-            span.set_attribute("encode.active_encodes_at_start", current_active)
+            span.set_attribute("encode.active_encodes_at_start", joined_at)
 
             # Get Asset from Firestore
             doc_ref = firestore_client.collection("assets").document(asset_id)
@@ -124,16 +125,24 @@ def handle_pubsub_message(envelope: PubSubMessage):
             # Dynatrace records error spans normally and Davis detects the
             # error-rate anomaly. The agent uses the boom.oom_killed=true
             # attribute as evidence.
-            if file_size > (500 * 1024 * 1024) and current_active > 3:
+            # Read the LIVE counter (not the stale joined_at snapshot) so we see
+            # the wave of concurrent threads that joined after us.
+            # CPython int reads are atomic; no lock needed for a read.
+            live_active = active_encodes
+            logger.info(
+                "ENC threshold-check: asset=%s file_size=%d joined_at=%d live_active=%d",
+                asset_id, file_size, joined_at, live_active,
+            )
+            if file_size > (500 * 1024 * 1024) and live_active > 1:
                 span.set_attribute("boom.oom_killed", True)
                 span.set_attribute("boom.reason", "MEMORY_LEAK_scripted")
                 span.set_attribute("encode.file_size_bytes", file_size)
-                span.set_attribute("encode.active_encodes", current_active)
+                span.set_attribute("encode.active_encodes", live_active)
                 span.set_attribute("encode.simulated_allocation_bytes", 2 * 1024 * 1024 * 1024)
                 span.set_status(Status(StatusCode.ERROR, "MEMORY_LEAK triggered"))
                 logger.warning(
                     "MEMORY_LEAK triggered: asset=%s file_size=%d active=%d",
-                    asset_id, file_size, current_active,
+                    asset_id, file_size, live_active,
                 )
                 raise HTTPException(
                     status_code=500,
@@ -203,8 +212,20 @@ def handle_pubsub_message(envelope: PubSubMessage):
 
             return {"status": "success", "action": "encoded"}
             
+    except HTTPException as exc:
+        # MEMORY_LEAK reaches here. Span has ended (with-block exited) and is
+        # queued for export — force flush so the breadcrumb lands in Dynatrace
+        # before the agent queries.
+        if "MEMORY_LEAK" in str(exc.detail):
+            try:
+                trace.get_tracer_provider().force_flush(timeout_millis=3000)
+            except Exception:  # noqa: BLE001
+                pass
+        raise
     except Exception as e:
-        span.record_exception(e)
+        # Unexpected. FastAPI's instrumentation will record this on the
+        # request span; we don't touch the (already-ended) encode_asset span.
+        logger.exception("encode_asset failed unexpectedly")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         with _active_encodes_lock:
