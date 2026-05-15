@@ -1,0 +1,60 @@
+# Explicitly exclude from Cloud Build source uploads.
+# Without this file gcloud falls back to .gitignore, but being explicit
+# prevents accidental leaks of secrets if .gitignore is ever edited.
+
+# Secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+service-account*.json
+gcp-key*.json
+*credentials*.json
+
+# VCS / dev
+.git/
+.gitignore
+.gcloudignore
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+
+# Docs / planning (not needed in the container)
+docs/
+*.md
+!README.md
+
+# Tests / scripts not used by the build
+scripts/chaos.sh
+scripts/verify-trace.py
+scripts/deploy.sh
+
+# Terraform local state
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+infra/terraform/*.tfvars
+
+# Media artifacts
+*.mp4
+*.mov
+*.mkv
+*.wav
+test-assets/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
