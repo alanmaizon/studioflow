@@ -22,7 +22,7 @@ steps:
       - '--set-env-vars'
       - 'PROJECT_ID=${PROJECT_ID},PUBSUB_TOPIC=${_PUBSUB_TOPIC},DEPLOYMENT_ENV=demo'
       - '--set-secrets'
-      - 'DT_TENANT=dynatrace-tenant:latest,DYNATRACE_API_TOKEN=dynatrace-token:latest'
+      - 'DT_TENANT=dynatrace-tenant:latest,DYNATRACE_API_TOKEN=dynatrace-otlp-token:latest'
 
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/workflow-service:${COMMIT_SHA}'
