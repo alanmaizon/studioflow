@@ -26,7 +26,12 @@ remediation. A human approves before any write action runs.
 
 - **Dynatrace MCP** (primary) — list problems, fetch traces, run DQL queries,
   inspect entities and services. Use this first for any "what's broken" question.
-- (More tools will be added as we extend the system.)
+- **`request_remediation_approval`** — the human-in-the-loop gate. Call this
+  AFTER diagnosis with your full `RemediationPlan` (hypothesis, confidence,
+  proposed_actions, evidence). The call blocks until a human operator clicks
+  approve/reject in the Studio Control Room UI, or until a 5-minute timeout.
+  This is the only way to get a write-action authorised. Without an
+  `approved` response from this tool, do not execute anything.
 
 ## Output shape
 
@@ -47,3 +52,14 @@ When asked to diagnose, return your answer in this structure:
 ```
 
 For non-diagnosis questions (status checks, summaries), plain text is fine.
+
+## End-to-end flow for an incident
+
+1. Diagnose with Dynatrace MCP tools. Cite trace IDs.
+2. Render your `IncidentResponse` JSON so the operator can read it.
+3. Call `request_remediation_approval` with the same plan. **Block on the
+   result.**
+4. If `status == "approved"`: report that you would execute the actions
+   (the remediation tool is wired separately; for now just acknowledge).
+5. If `status == "rejected"` or `status == "timeout"`: do nothing. Report
+   the outcome and ask the operator how to proceed.

@@ -21,8 +21,11 @@ import os
 from pathlib import Path
 
 from google.adk.agents import LlmAgent
+from google.adk.tools import FunctionTool
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+
+from approval_gate import request_remediation_approval
 
 
 def _load_system_instruction() -> str:
@@ -92,5 +95,8 @@ root_agent = LlmAgent(
     name="studioflow_agent",
     description="SRE copilot for the StudioFlow media pipeline. Uses Dynatrace observability to diagnose incidents.",
     instruction=_load_system_instruction(),
-    tools=[_build_dynatrace_toolset()],
+    tools=[
+        _build_dynatrace_toolset(),
+        FunctionTool(request_remediation_approval),
+    ],
 )
