@@ -2,14 +2,16 @@ import os
 import json
 import base64
 import time
-import asyncio
+import threading
 import tempfile
 import subprocess
-from fastapi import FastAPI, Request, HTTPException
+import logging
+from typing import Any
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
-import logging
 
 from google.cloud import pubsub_v1
 from google.cloud import firestore
@@ -36,21 +38,31 @@ pubsub_publisher = pubsub_v1.PublisherClient()
 topic_path = pubsub_publisher.topic_path(project_id, pubsub_topic) if project_id else ""
 
 # Concurrency counter for the scripted MEMORY_LEAK trigger condition.
+# Shared across threads (sync handler under FastAPI's threadpool) — a Lock keeps
+# read-modify-write ordered so the threshold check is consistent.
 active_encodes = 0
+_active_encodes_lock = threading.Lock()
+
+
+class PubSubMessage(BaseModel):
+    """Pub/Sub HTTP push envelope. We only care about message.data; the SDK fills the rest."""
+    message: dict[str, Any]
+
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "active_encodes": active_encodes}
 
+
+# NOTE: sync `def` is intentional. FastAPI runs sync routes on a threadpool, so
+# concurrent Pub/Sub pushes execute in parallel threads sharing `active_encodes`.
+# An `async def` here would block the event loop on every GCS / ffmpeg call and
+# serialise requests, making `active_encodes > 3` impossible to reach.
 @app.post("/pubsub/push")
-async def handle_pubsub_message(request: Request):
+def handle_pubsub_message(envelope: PubSubMessage):
     global active_encodes
-    
-    envelope = await request.json()
-    if not envelope:
-        raise HTTPException(status_code=400, detail="Bad request")
-    
-    message = envelope.get("message", {})
+
+    message = envelope.message
     if "data" not in message:
         raise HTTPException(status_code=400, detail="No data in message")
 
@@ -69,12 +81,14 @@ async def handle_pubsub_message(request: Request):
     if event_type != "asset.encoding_requested":
         return {"status": "success", "action": "ignored"}
 
-    active_encodes += 1
+    with _active_encodes_lock:
+        active_encodes += 1
+        current_active = active_encodes
     try:
         with tracer.start_as_current_span("encode_asset") as span:
             span.set_attribute("asset.id", asset_id)
             span.set_attribute("event.type", event_type)
-            span.set_attribute("encode.active_encodes_at_start", active_encodes)
+            span.set_attribute("encode.active_encodes_at_start", current_active)
 
             # Get Asset from Firestore
             doc_ref = firestore_client.collection("assets").document(asset_id)
@@ -110,16 +124,16 @@ async def handle_pubsub_message(request: Request):
             # Dynatrace records error spans normally and Davis detects the
             # error-rate anomaly. The agent uses the boom.oom_killed=true
             # attribute as evidence.
-            if file_size > (500 * 1024 * 1024) and active_encodes > 3:
+            if file_size > (500 * 1024 * 1024) and current_active > 3:
                 span.set_attribute("boom.oom_killed", True)
                 span.set_attribute("boom.reason", "MEMORY_LEAK_scripted")
                 span.set_attribute("encode.file_size_bytes", file_size)
-                span.set_attribute("encode.active_encodes", active_encodes)
+                span.set_attribute("encode.active_encodes", current_active)
                 span.set_attribute("encode.simulated_allocation_bytes", 2 * 1024 * 1024 * 1024)
                 span.set_status(Status(StatusCode.ERROR, "MEMORY_LEAK triggered"))
                 logger.warning(
                     "MEMORY_LEAK triggered: asset=%s file_size=%d active=%d",
-                    asset_id, file_size, active_encodes,
+                    asset_id, file_size, current_active,
                 )
                 raise HTTPException(
                     status_code=500,
@@ -193,4 +207,5 @@ async def handle_pubsub_message(request: Request):
         span.record_exception(e)
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        active_encodes -= 1
+        with _active_encodes_lock:
+            active_encodes -= 1

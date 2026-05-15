@@ -20,7 +20,7 @@ steps:
       - '${_REGION}'
       - '--allow-unauthenticated'
       - '--memory'
-      - '1024Mi'
+      - '2Gi'
       - '--max-instances'
       - '1'
       - '--min-instances'
