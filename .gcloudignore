@@ -36,6 +36,8 @@ node_modules/
 docs/
 *.md
 !README.md
+# Prompt templates ARE part of the agent service image.
+!services/agent/prompts/**
 
 # Tests / scripts not used by the build
 scripts/chaos.sh
