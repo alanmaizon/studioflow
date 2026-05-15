@@ -25,9 +25,16 @@ def _bootstrap_env() -> None:
     if env_path.exists():
         load_dotenv(env_path)
     # ADK -> Vertex AI via ADC.
+    # NOTE: GOOGLE_CLOUD_LOCATION must be `global` for Gemini 3.x previews —
+    # us-central1 returns 404 NOT_FOUND on this project. REGION (us-central1)
+    # is still used for the Cloud Run services themselves; it just doesn't
+    # apply to Gemini model inference.
     os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "True")
     os.environ.setdefault("GOOGLE_CLOUD_PROJECT", os.environ.get("PROJECT_ID", ""))
-    os.environ.setdefault("GOOGLE_CLOUD_LOCATION", os.environ.get("REGION", "us-central1"))
+    os.environ.setdefault(
+        "GOOGLE_CLOUD_LOCATION",
+        os.environ.get("VERTEX_LOCATION") or os.environ.get("REGION", "us-central1"),
+    )
 
 
 async def run_once(prompt: str) -> int:

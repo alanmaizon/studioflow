@@ -77,10 +77,14 @@ def _build_dynatrace_toolset() -> McpToolset:
     )
 
 
+# Per CLAUDE.md §0 the brain is gemini-3.1-pro-preview. For sub-tasks (cheaper,
+# faster, lower thinking budget) callers can override via AGENT_MODEL or use
+# GEMINI_FLASH_MODEL directly. Defaults cascade Pro → Flash → safety fallback.
 MODEL = (
     os.environ.get("AGENT_MODEL")
+    or os.environ.get("GEMINI_MODEL")
     or os.environ.get("GEMINI_FLASH_MODEL")
-    or "gemini-3-flash-preview"
+    or "gemini-3.1-pro-preview"
 )
 
 root_agent = LlmAgent(
