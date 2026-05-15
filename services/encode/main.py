@@ -8,6 +8,7 @@ import subprocess
 from fastapi import FastAPI, Request, HTTPException
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 import logging
 
 from google.cloud import pubsub_v1
@@ -102,12 +103,28 @@ async def handle_pubsub_message(request: Request):
             # ---------------------------------------------------------
             # DELIBERATE FAILURE MODE: MEMORY_LEAK
             # ---------------------------------------------------------
-            # Trigger: file > 500MB and concurrent > 3
-            # We use 500MB = 500 * 1024 * 1024
+            # Trigger: file > 500MB and concurrent > 3.
+            # We record the imminent OOM in a CHILD span that ends, then force-flush
+            # the tracer so Dynatrace receives the breadcrumb BEFORE SIGKILL.
+            # Without this, BatchSpanProcessor never flushes and the agent has
+            # no application-level evidence of the OOM.
             if file_size > (500 * 1024 * 1024) and active_encodes > 3:
-                span.set_attribute("boom.oom_killed", True)
-                logger.warning("MEMORY_LEAK scripted failure triggered!")
-                # Deliberately allocate a massive 2GB buffer and maintain reference to trigger OOM limit in Cloud Run
+                with tracer.start_as_current_span("oom_imminent") as oom_span:
+                    oom_span.set_attribute("boom.oom_killed", True)
+                    oom_span.set_attribute("boom.reason", "MEMORY_LEAK_scripted")
+                    oom_span.set_attribute("encode.file_size_bytes", file_size)
+                    oom_span.set_attribute("encode.active_encodes", active_encodes)
+                    oom_span.set_attribute("encode.allocation_bytes", 2 * 1024 * 1024 * 1024)
+                    oom_span.set_status(Status(StatusCode.ERROR, "MEMORY_LEAK triggered"))
+                    span.set_attribute("boom.oom_killed", True)
+                # Child span ended → queued for export. Force flush before we die.
+                try:
+                    trace.get_tracer_provider().force_flush(timeout_millis=5000)
+                except Exception:  # noqa: BLE001 - best effort, never block the OOM
+                    pass
+                logger.warning("MEMORY_LEAK scripted failure triggered! Allocating 2GB...")
+                # Deliberately allocate a massive 2GB buffer and maintain reference
+                # to trigger Cloud Run's 1024Mi limit → SIGKILL.
                 _leaked_memory.append(bytearray(2 * 1024 * 1024 * 1024))
             
             # Use temp directory for downloading and transcoding
