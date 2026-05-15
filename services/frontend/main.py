@@ -194,15 +194,22 @@ def list_assets(limit: int = 30):
 
 @app.get("/api/approvals")
 def list_approvals(status: str | None = None, limit: int = 20):
+    """List approvals. Filter by status in Python (avoids needing a Firestore
+    composite index for the where+orderBy combo at our scale)."""
     db = _require_firestore()
     with tracer.start_as_current_span("api_list_approvals") as span:
-        q = db.collection("approvals")
+        # Pull a generous batch ordered by submitted_at DESC, then filter.
+        docs = list(
+            db.collection("approvals")
+            .order_by("submitted_at", direction=firestore.Query.DESCENDING)
+            .limit(max(limit * 4, 40))
+            .stream()
+        )
+        cards = [_approval_to_card(d) for d in docs]
         if status:
-            q = q.where("status", "==", status)
-        q = q.order_by("submitted_at", direction=firestore.Query.DESCENDING).limit(limit)
-        docs = list(q.stream())
-        span.set_attribute("approvals.count", len(docs))
-        return [_approval_to_card(d) for d in docs]
+            cards = [c for c in cards if c.get("status") == status]
+        span.set_attribute("approvals.count", len(cards))
+        return cards[:limit]
 
 
 class DecisionRequest(BaseModel):
