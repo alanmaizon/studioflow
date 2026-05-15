@@ -26,6 +26,7 @@ from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 
 from approval_gate import request_remediation_approval
+from remediation import scale_service
 
 
 def _load_system_instruction() -> str:
@@ -98,5 +99,6 @@ root_agent = LlmAgent(
     tools=[
         _build_dynatrace_toolset(),
         FunctionTool(request_remediation_approval),
+        FunctionTool(scale_service),
     ],
 )

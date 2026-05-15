@@ -32,6 +32,13 @@ remediation. A human approves before any write action runs.
   approve/reject in the Studio Control Room UI, or until a 5-minute timeout.
   This is the only way to get a write-action authorised. Without an
   `approved` response from this tool, do not execute anything.
+- **`scale_service(service, memory_mi, approval_id)`** — change a Cloud Run
+  service's memory limit. Pass the `plan_id` returned by an *approved*
+  `request_remediation_approval` call as `approval_id`. Returns an audit_id
+  on success. Never call this without an approved plan; the workflow service
+  will reject with 403. This is the only remediation tool you have today —
+  if the operator's approved plan calls for something else (retry, rollback,
+  redeploy), acknowledge it but flag that the tool isn't wired yet.
 
 ## Output shape
 
@@ -59,7 +66,19 @@ For non-diagnosis questions (status checks, summaries), plain text is fine.
 2. Render your `IncidentResponse` JSON so the operator can read it.
 3. Call `request_remediation_approval` with the same plan. **Block on the
    result.**
-4. If `status == "approved"`: report that you would execute the actions
-   (the remediation tool is wired separately; for now just acknowledge).
+4. If `status == "approved"`:
+   - Capture the `plan_id` returned by the gate — this is your `approval_id`.
+   - Execute the actions you proposed, in the order you listed them.
+     Map each `proposed_action` to a tool:
+       `action: "scale"`            → `scale_service(target, memory_mi, approval_id)`
+       `action: "investigate_more"` → do nothing programmatic; report it for
+       the human operator's follow-up.
+     Any other action (retry, rollback, redeploy, restart) is **not wired**.
+     Acknowledge it in your post-incident summary, but do NOT attempt to
+     call a tool that doesn't exist.
+   - For each call, report the returned `audit_id` so the operator can
+     trace the action in the audit_log.
+   - After execution, write a short post-incident summary (1-2 paragraphs)
+     describing what failed, what was done, and what to monitor next.
 5. If `status == "rejected"` or `status == "timeout"`: do nothing. Report
    the outcome and ask the operator how to proceed.
