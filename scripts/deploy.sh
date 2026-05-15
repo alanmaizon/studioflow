@@ -46,6 +46,14 @@ deploy_one() {
     fi
     subs="${subs},_WORKFLOW_URL=${wf_url}"
   fi
+  if [[ "$service" == "frontend" ]]; then
+    local ag_url
+    ag_url=$(gcloud run services describe agent-service --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)' 2>/dev/null || true)
+    if [[ -z "$ag_url" ]]; then
+      echo "WARN: agent-service is not deployed; frontend's AGENT_URL will be empty (Diagnose button will 503)." >&2
+    fi
+    subs="${subs},_GCS_BUCKET=${BUCKET},_AGENT_URL=${ag_url}"
+  fi
 
   echo
   echo "=== deploying $service (SHA=$SHA) ==="

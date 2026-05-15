@@ -19,7 +19,7 @@ steps:
       - '--memory'
       - '512Mi'
       - '--set-env-vars'
-      - 'PROJECT_ID=${PROJECT_ID},DEPLOYMENT_ENV=demo'
+      - 'PROJECT_ID=${PROJECT_ID},DEPLOYMENT_ENV=demo,GCS_BUCKET=${_GCS_BUCKET},PUBSUB_TOPIC=${_PUBSUB_TOPIC},AGENT_URL=${_AGENT_URL}'
       - '--set-secrets'
       - 'DT_TENANT=dynatrace-tenant:latest,DYNATRACE_API_TOKEN=dynatrace-otlp-token:latest'
 

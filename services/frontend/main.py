@@ -17,7 +17,13 @@ Endpoints:
 from __future__ import annotations
 
 import os
+import json
+import time
+import uuid
 import logging
+import urllib.request
+import urllib.error
+import concurrent.futures
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -29,7 +35,7 @@ from pydantic import BaseModel, Field
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry import trace
 
-from google.cloud import firestore
+from google.cloud import firestore, pubsub_v1
 
 from observability.tracer import init_tracer
 
@@ -43,6 +49,13 @@ tracer = trace.get_tracer(__name__)
 
 project_id = os.environ.get("PROJECT_ID")
 firestore_client = firestore.Client(project=project_id) if project_id else None
+pubsub_publisher = pubsub_v1.PublisherClient() if project_id else None
+
+PUBSUB_TOPIC = os.environ.get("PUBSUB_TOPIC", "studioflow-events")
+GCS_BUCKET = os.environ.get("GCS_BUCKET") or (f"{project_id}-assets" if project_id else "")
+AGENT_URL = (os.environ.get("AGENT_URL") or "").rstrip("/")
+CHAOS_GCS_OBJECT = os.environ.get("CHAOS_GCS_OBJECT", "chaos/chaos_dummy.mp4")
+TOPIC_PATH = pubsub_publisher.topic_path(project_id, PUBSUB_TOPIC) if (pubsub_publisher and project_id) else ""
 
 
 # =============================================================================
@@ -286,6 +299,89 @@ def pipeline_summary():
         {"id": "enrichment", "name": "Enrichment", "count": buckets["enrichment"], "health": "healthy", "meta": "p99 6s"},
         {"id": "publish",    "name": "Publish",    "count": buckets["publish"],    "health": "healthy", "meta": "p99 2.1s"},
     ]
+
+
+# =============================================================================
+# Demo trigger endpoints — make the UI's "Run chaos" + "Diagnose" buttons real.
+# =============================================================================
+
+class ChaosResponse(BaseModel):
+    asset_id: str
+    message_count: int
+    gcs_uri: str
+
+
+@app.post("/api/chaos/trigger", response_model=ChaosResponse)
+def trigger_chaos():
+    """Mirror scripts/chaos.sh: register a fresh chaos asset against the
+    pre-staged chaos_dummy.mp4 in GCS and publish 10 encoding-requested
+    events in parallel. The encode service's deterministic file-size trigger
+    fires MEMORY_LEAK on the first request that hits the threshold."""
+    db = _require_firestore()
+    if not pubsub_publisher or not TOPIC_PATH:
+        raise HTTPException(status_code=503, detail="Pub/Sub publisher not initialized")
+    asset_id = f"chaos-{uuid.uuid4().hex}"
+    gcs_uri = f"gs://{GCS_BUCKET}/{CHAOS_GCS_OBJECT}"
+    with tracer.start_as_current_span("api_chaos_trigger") as span:
+        span.set_attribute("asset.id", asset_id)
+        span.set_attribute("gcs.uri", gcs_uri)
+        db.collection("assets").document(asset_id).set({
+            "id": asset_id,
+            "status": "encoding",
+            "gcs_uri": gcs_uri,
+            "filename": f"chaos-{asset_id[:8]}.mp4",
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "source": "chaos-button",
+        })
+        payload = json.dumps({
+            "event_type": "asset.encoding_requested",
+            "asset_id": asset_id,
+            "timestamp": time.time(),
+        }).encode("utf-8")
+        # Concurrent publish — match the burst chaos.sh produces.
+        BURST = 10
+        with concurrent.futures.ThreadPoolExecutor(max_workers=BURST) as pool:
+            futures = [pool.submit(lambda: pubsub_publisher.publish(TOPIC_PATH, data=payload).result(timeout=15))
+                       for _ in range(BURST)]
+            for f in concurrent.futures.as_completed(futures):
+                f.result()
+        logger.info("chaos triggered: asset_id=%s messages=%d", asset_id, BURST)
+        span.set_attribute("messages.published", BURST)
+        return ChaosResponse(asset_id=asset_id, message_count=BURST, gcs_uri=gcs_uri)
+
+
+class DiagnoseRequest(BaseModel):
+    prompt: str | None = None
+
+
+@app.post("/api/agent/diagnose")
+def proxy_diagnose(req: DiagnoseRequest):
+    """Proxy to the deployed agent service's /diagnose. Keeps the agent URL
+    out of the browser and lets the browser fetch hit the same origin."""
+    if not AGENT_URL:
+        raise HTTPException(status_code=503, detail="AGENT_URL env var not configured on frontend service")
+    body = json.dumps({"prompt": req.prompt} if req.prompt else {}).encode("utf-8")
+    request = urllib.request.Request(
+        f"{AGENT_URL}/diagnose",
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with tracer.start_as_current_span("api_proxy_diagnose") as span:
+        span.set_attribute("agent.url", AGENT_URL)
+        try:
+            with urllib.request.urlopen(request, timeout=540) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+                span.set_attribute("agent.audit_id", payload.get("audit_id") or "")
+                span.set_attribute("agent.approval_status", payload.get("approval_status") or "")
+                return payload
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", errors="replace")[:500]
+            logger.warning("agent /diagnose returned HTTP %d: %s", e.code, detail)
+            raise HTTPException(status_code=e.code, detail=detail) from e
+        except Exception as e:  # noqa: BLE001
+            logger.exception("agent /diagnose proxy failed")
+            raise HTTPException(status_code=502, detail=f"agent proxy error: {e}") from e
 
 
 # =============================================================================

@@ -1,0 +1,212 @@
+/* ============================================================
+   StudioFlow Design System — colors + type tokens
+   Dark-native, Apple/Cupertino-flavoured operational dashboard.
+   ============================================================ */
+
+/* --- Webfont declarations ------------------------------------ */
+/* SF Pro Display (≥20px) + SF Pro Text (<20px), self-hosted in fonts/.
+   SF Pro Display = use for Display / H1 / H2 (anything big).
+   SF Pro Text    = optimized for small sizes — H3 / Body / Caption.
+   Both are declared under the family name "SF Pro" + a separate
+   "SF Pro Display" family so we can pick optical size by var.
+   JetBrains Mono substitutes for SF Mono (Apple does not license
+   SF Mono for non-Apple platforms). */
+
+@font-face { font-family: "SF Pro Display"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/SF-Pro-Display-Regular.otf") format("opentype"); }
+@font-face { font-family: "SF Pro Display"; font-style: normal; font-weight: 500; font-display: swap;
+  src: url("fonts/SF-Pro-Display-Medium.otf") format("opentype"); }
+@font-face { font-family: "SF Pro Display"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/SF-Pro-Display-Semibold.otf") format("opentype"); }
+@font-face { font-family: "SF Pro Display"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("fonts/SF-Pro-Display-Bold.otf") format("opentype"); }
+
+@font-face { font-family: "SF Pro Text"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/SF-Pro-Text-Regular.otf") format("opentype"); }
+@font-face { font-family: "SF Pro Text"; font-style: normal; font-weight: 500; font-display: swap;
+  src: url("fonts/SF-Pro-Text-Medium.otf") format("opentype"); }
+@font-face { font-family: "SF Pro Text"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/SF-Pro-Text-Semibold.otf") format("opentype"); }
+@font-face { font-family: "SF Pro Text"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("fonts/SF-Pro-Text-Bold.otf") format("opentype"); }
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: local("JetBrains Mono"),
+       url("https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4xD-IQ-PuZJJXxfpAO-Lf1OQk6OThxPA.woff2") format("woff2");
+}
+
+/* ============================================================
+   :root — tokens
+   ============================================================ */
+
+:root {
+  /* --- Surfaces (Apple-style dark elevation ladder) ------------ */
+  --sf-bg:               #000000;
+  --sf-surface:          #1c1c1e;
+  --sf-surface-hover:    #2c2c2e;
+  --sf-surface-active:   #3a3a3c;
+  --sf-surface-glass:    rgba(28, 28, 30, 0.6);
+  --sf-surface-glass-strong: rgba(28, 28, 30, 0.78);
+  --sf-overlay-hover:    rgba(255, 255, 255, 0.04);
+  --sf-overlay-press:    rgba(255, 255, 255, 0.08);
+  --sf-scrim:            rgba(0, 0, 0, 0.6);
+
+  /* --- Borders (translucent inner strokes, never hard lines) -- */
+  --sf-border:           rgba(255, 255, 255, 0.08);
+  --sf-border-strong:    rgba(255, 255, 255, 0.12);
+  --sf-border-subtle:    rgba(255, 255, 255, 0.05);
+  --sf-edge-highlight:   rgba(255, 255, 255, 0.06); /* inset top hairline */
+
+  /* --- Foreground ladder -------------------------------------- */
+  --sf-fg-1:             rgba(255, 255, 255, 0.95);  /* primary text + headlines */
+  --sf-fg-2:             rgba(255, 255, 255, 0.65);  /* secondary, captions */
+  --sf-fg-3:             rgba(255, 255, 255, 0.42);  /* tertiary, placeholders */
+  --sf-fg-4:             rgba(255, 255, 255, 0.22);  /* disabled, dividers */
+  --sf-fg-pure:          #ffffff;                    /* pure-white headline */
+
+  /* --- Accent (macOS Blue) ------------------------------------ */
+  --sf-accent:           #0A84FF;
+  --sf-accent-hover:     #2A95FF;
+  --sf-accent-press:     #0974E0;
+  --sf-accent-fill:      rgba(10, 132, 255, 0.18);
+  --sf-accent-border:    rgba(10, 132, 255, 0.32);
+
+  /* --- Semantic status (Apple system colors) ------------------ */
+  --sf-status-green:        #30D158;  /* published, healthy */
+  --sf-status-green-fill:   rgba(48, 209, 88, 0.16);
+  --sf-status-green-border: rgba(48, 209, 88, 0.30);
+
+  --sf-status-amber:        #FF9F0A;  /* encoding, processing */
+  --sf-status-amber-fill:   rgba(255, 159, 10, 0.16);
+  --sf-status-amber-border: rgba(255, 159, 10, 0.30);
+
+  --sf-status-red:          #FF453A;  /* OOM, failed */
+  --sf-status-red-fill:     rgba(255, 69, 58, 0.16);
+  --sf-status-red-border:   rgba(255, 69, 58, 0.30);
+
+  --sf-status-indigo:       #5E5CE6;  /* agent activity */
+  --sf-status-indigo-fill:  rgba(94, 92, 230, 0.16);
+  --sf-status-indigo-border:rgba(94, 92, 230, 0.30);
+
+  --sf-status-neutral:        rgba(235, 235, 245, 0.6);  /* ingested, generic */
+  --sf-status-neutral-fill:   rgba(255, 255, 255, 0.08);
+  --sf-status-neutral-border: rgba(255, 255, 255, 0.10);
+
+  /* --- Type families ----------------------------------------- */
+  /* Apple's optical-size rule: SF Pro Display ≥ 20px, SF Pro Text < 20px.
+     We expose both as separate stacks; the scale below picks the right
+     one per role. */
+  --sf-font-sans:        "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  --sf-font-display:     "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  --sf-font-mono:        "JetBrains Mono", "SF Mono", "Menlo", "Consolas", monospace;
+
+  /* --- Type scale (px / line / tracking / weight) ------------ */
+  --sf-text-display:     600 48px/56px var(--sf-font-display);
+  --sf-text-h1:          600 32px/40px var(--sf-font-display);
+  --sf-text-h2:          600 22px/28px var(--sf-font-display);
+  --sf-text-h3:          600 17px/24px var(--sf-font-sans);
+  --sf-text-body:        400 15px/22px var(--sf-font-sans);
+  --sf-text-body-strong: 500 15px/22px var(--sf-font-sans);
+  --sf-text-caption:     400 13px/18px var(--sf-font-sans);
+  --sf-text-caption-strong: 500 13px/18px var(--sf-font-sans);
+  --sf-text-micro:       600 11px/16px var(--sf-font-sans);
+  --sf-text-mono:        450 13px/20px var(--sf-font-mono);
+  --sf-text-mono-strong: 600 13px/20px var(--sf-font-mono);
+
+  /* --- Letter spacing per role ------------------------------ */
+  --sf-tracking-display: -0.02em;
+  --sf-tracking-h1:      -0.01em;
+  --sf-tracking-h2:      -0.005em;
+  --sf-tracking-body:    0;
+  --sf-tracking-micro:   0.06em;     /* uppercase pill labels */
+
+  /* --- Radii ------------------------------------------------ */
+  --sf-radius-xs:        4px;
+  --sf-radius-sm:        6px;
+  --sf-radius-md:        10px;
+  --sf-radius-lg:        14px;
+  --sf-radius-xl:        18px;
+  --sf-radius-2xl:       24px;
+  --sf-radius-pill:      999px;
+
+  /* --- Spacing (4px base grid) ------------------------------ */
+  --sf-space-0:          0;
+  --sf-space-1:          2px;
+  --sf-space-2:          4px;
+  --sf-space-3:          6px;
+  --sf-space-4:          8px;
+  --sf-space-5:          12px;
+  --sf-space-6:          16px;
+  --sf-space-7:          20px;
+  --sf-space-8:          24px;
+  --sf-space-9:          32px;
+  --sf-space-10:         40px;
+  --sf-space-11:         48px;
+  --sf-space-12:         64px;
+  --sf-space-13:         80px;
+
+  /* --- Elevation (composed: edge highlight + halo) ---------- */
+  --sf-elev-1: inset 0 1px 0 var(--sf-edge-highlight),
+               inset 0 0 0 1px var(--sf-border);
+  --sf-elev-2: inset 0 1px 0 var(--sf-edge-highlight),
+               inset 0 0 0 1px var(--sf-border),
+               0 6px 16px rgba(0, 0, 0, 0.32);
+  --sf-elev-3: inset 0 1px 0 rgba(255,255,255,0.08),
+               inset 0 0 0 1px var(--sf-border-strong),
+               0 12px 32px rgba(0, 0, 0, 0.48);
+  --sf-elev-4: inset 0 1px 0 rgba(255,255,255,0.10),
+               inset 0 0 0 1px var(--sf-border-strong),
+               0 24px 60px rgba(0, 0, 0, 0.6);
+
+  /* --- Focus ring (always 2px accent at 2px offset) --------- */
+  --sf-focus-ring:       0 0 0 2px var(--sf-bg),
+                         0 0 0 4px var(--sf-accent);
+
+  /* --- Motion ------------------------------------------------ */
+  --sf-ease-standard:    cubic-bezier(0.4, 0, 0.2, 1);
+  --sf-ease-entry:       cubic-bezier(0.16, 1, 0.3, 1);
+  --sf-dur-1:            120ms;  /* hover/focus */
+  --sf-dur-2:            220ms;  /* menu open */
+  --sf-dur-3:            320ms;  /* panel slide */
+  --sf-dur-4:            480ms;  /* modal sheet */
+
+  /* --- Glass blur ------------------------------------------- */
+  --sf-blur-bar:         saturate(180%) blur(20px);
+  --sf-blur-panel:       saturate(180%) blur(40px);
+  --sf-blur-modal:       saturate(180%) blur(60px);
+}
+
+/* ============================================================
+   Base reset for design-system previews
+   ============================================================ */
+
+html, body {
+  background: var(--sf-bg);
+  color: var(--sf-fg-1);
+  font: var(--sf-text-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* ============================================================
+   Semantic type roles — use these classes when not in JSX
+   ============================================================ */
+
+.sf-display      { font: var(--sf-text-display);     letter-spacing: var(--sf-tracking-display); color: var(--sf-fg-pure); }
+.sf-h1           { font: var(--sf-text-h1);          letter-spacing: var(--sf-tracking-h1);     color: var(--sf-fg-pure); }
+.sf-h2           { font: var(--sf-text-h2);          letter-spacing: var(--sf-tracking-h2);     color: var(--sf-fg-1); }
+.sf-h3           { font: var(--sf-text-h3);          letter-spacing: 0;                          color: var(--sf-fg-1); }
+.sf-body         { font: var(--sf-text-body);        color: var(--sf-fg-1); }
+.sf-body-strong  { font: var(--sf-text-body-strong); color: var(--sf-fg-1); }
+.sf-body-secondary { font: var(--sf-text-body);      color: var(--sf-fg-2); }
+.sf-caption      { font: var(--sf-text-caption);     color: var(--sf-fg-2); }
+.sf-caption-strong { font: var(--sf-text-caption-strong); color: var(--sf-fg-1); }
+.sf-micro        { font: var(--sf-text-micro);       letter-spacing: var(--sf-tracking-micro);  text-transform: uppercase; color: var(--sf-fg-2); }
+.sf-mono         { font: var(--sf-text-mono);        color: var(--sf-fg-1); }
+.sf-mono-strong  { font: var(--sf-text-mono-strong); color: var(--sf-fg-1); }
