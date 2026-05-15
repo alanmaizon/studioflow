@@ -35,9 +35,8 @@ storage_client = storage.Client(project=project_id)
 pubsub_publisher = pubsub_v1.PublisherClient()
 topic_path = pubsub_publisher.topic_path(project_id, pubsub_topic) if project_id else ""
 
-# State variables for our scripted incidents
+# Concurrency counter for the scripted MEMORY_LEAK trigger condition.
 active_encodes = 0
-_leaked_memory = []
 
 @app.get("/health")
 def health_check():
@@ -101,31 +100,34 @@ async def handle_pubsub_message(request: Request):
             file_size = blob.size or 0
 
             # ---------------------------------------------------------
-            # DELIBERATE FAILURE MODE: MEMORY_LEAK
+            # DELIBERATE FAILURE MODE: MEMORY_LEAK (telemetry-only)
             # ---------------------------------------------------------
             # Trigger: file > 500MB and concurrent > 3.
-            # We record the imminent OOM in a CHILD span that ends, then force-flush
-            # the tracer so Dynatrace receives the breadcrumb BEFORE SIGKILL.
-            # Without this, BatchSpanProcessor never flushes and the agent has
-            # no application-level evidence of the OOM.
+            # Records OOM-style telemetry and returns a clean HTTP 500. We do
+            # NOT actually allocate the 2GB buffer because hard OOMs put
+            # Cloud Run into a circuit-breaker state that throttles the LB,
+            # which masks the very signal Davis needs to see. With clean 500s,
+            # Dynatrace records error spans normally and Davis detects the
+            # error-rate anomaly. The agent uses the boom.oom_killed=true
+            # attribute as evidence.
             if file_size > (500 * 1024 * 1024) and active_encodes > 3:
-                with tracer.start_as_current_span("oom_imminent") as oom_span:
-                    oom_span.set_attribute("boom.oom_killed", True)
-                    oom_span.set_attribute("boom.reason", "MEMORY_LEAK_scripted")
-                    oom_span.set_attribute("encode.file_size_bytes", file_size)
-                    oom_span.set_attribute("encode.active_encodes", active_encodes)
-                    oom_span.set_attribute("encode.allocation_bytes", 2 * 1024 * 1024 * 1024)
-                    oom_span.set_status(Status(StatusCode.ERROR, "MEMORY_LEAK triggered"))
-                    span.set_attribute("boom.oom_killed", True)
-                # Child span ended → queued for export. Force flush before we die.
-                try:
-                    trace.get_tracer_provider().force_flush(timeout_millis=5000)
-                except Exception:  # noqa: BLE001 - best effort, never block the OOM
-                    pass
-                logger.warning("MEMORY_LEAK scripted failure triggered! Allocating 2GB...")
-                # Deliberately allocate a massive 2GB buffer and maintain reference
-                # to trigger Cloud Run's 1024Mi limit → SIGKILL.
-                _leaked_memory.append(bytearray(2 * 1024 * 1024 * 1024))
+                span.set_attribute("boom.oom_killed", True)
+                span.set_attribute("boom.reason", "MEMORY_LEAK_scripted")
+                span.set_attribute("encode.file_size_bytes", file_size)
+                span.set_attribute("encode.active_encodes", active_encodes)
+                span.set_attribute("encode.simulated_allocation_bytes", 2 * 1024 * 1024 * 1024)
+                span.set_status(Status(StatusCode.ERROR, "MEMORY_LEAK triggered"))
+                logger.warning(
+                    "MEMORY_LEAK triggered: asset=%s file_size=%d active=%d",
+                    asset_id, file_size, active_encodes,
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Encode service exhausted memory while transcoding 4K source "
+                        "under high concurrency (MEMORY_LEAK)"
+                    ),
+                )
             
             # Use temp directory for downloading and transcoding
             with tempfile.TemporaryDirectory() as temp_dir:
