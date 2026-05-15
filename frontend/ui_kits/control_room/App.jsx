@@ -1,6 +1,48 @@
 // App.jsx — top-level layout + demo state machine.
+//
+// LIVE DATA: assets / pipeline summary / approvals / audit_log are fetched from
+// the backend API every POLL_INTERVAL_MS. The "Run chaos" button still drives
+// a scripted tool-stream + envState animation so the right inspector panel has
+// activity during the agent's diagnosis, but the ACTUAL approval gate is
+// driven by the real Firestore approvals/ collection.
 
 const { useState, useEffect, useRef, useCallback } = React;
+
+const POLL_INTERVAL_MS = 3000;
+
+// Map an API approval doc into the ApprovalGate's expected `remediation` shape.
+const mapApprovalToRemediation = (approval) => {
+  if (!approval) return null;
+  const actions = (approval.proposed_actions || []).map((a, i) => {
+    const params = a.params || {};
+    const memoryMi = params.memory_mi || params.memory_mb || params.memory;
+    let label, target, duration;
+    if (a.action === "scale") {
+      label = "Scale memory";
+      target = memoryMi ? `${memoryMi} MiB` : (a.target || "memory");
+      duration = "~12s";
+    } else if (a.action === "rollback") {
+      label = "Rollback to commit";
+      target = params.to_commit || a.target;
+      duration = "~30s";
+    } else if (a.action === "retry" || a.action === "retry-asset" || a.action === "retry_asset") {
+      label = "Retry asset";
+      target = a.target;
+      duration = "~5s";
+    } else {
+      label = a.action || "Action";
+      target = a.target || "—";
+      duration = "—";
+    }
+    return { id: i + 1, label, target, duration };
+  });
+  return {
+    actions,
+    confidence: approval.confidence,
+    problemId: approval.id.slice(0, 8),
+    planId: approval.id,
+  };
+};
 
 /* ============================================================
    The demo state machine
@@ -19,6 +61,12 @@ const App = () => {
   const [toolLines,   setToolLines]   = useState([]);
   const [toasts,      setToasts]      = useState([]);
   const [time,        setTime]        = useState("14:31:02");
+  // LIVE DATA from backend.
+  const [liveAssets,       setLiveAssets]       = useState([]);
+  const [liveServices,     setLiveServices]     = useState([]);
+  const [livePending,      setLivePending]      = useState(null);   // first pending approval
+  const [liveAuditLog,     setLiveAuditLog]     = useState([]);
+  const seenAuditIdsRef = useRef(new Set());
   const timersRef = useRef([]);
 
   // Live clock
@@ -28,6 +76,51 @@ const App = () => {
       setTime(d.toLocaleTimeString("en-GB", { hour12: false }));
     }, 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // LIVE DATA polling. Fires immediately and then every POLL_INTERVAL_MS.
+  useEffect(() => {
+    let cancelled = false;
+    const pushToastSafe = (toast) => {
+      const id = Math.random().toString(36).slice(2);
+      setToasts(ts => [...ts, { ...toast, id }]);
+      setTimeout(() => setToasts(ts => ts.filter(t => t.id !== id)), toast.duration || 4500);
+    };
+    const tick = async () => {
+      try {
+        const [assets, services, approvals, audit] = await Promise.all([
+          fetch("/api/assets?limit=20").then(r => r.json()).catch(() => []),
+          fetch("/api/pipeline-summary").then(r => r.json()).catch(() => []),
+          fetch("/api/approvals?status=pending&limit=5").then(r => r.json()).catch(() => []),
+          fetch("/api/audit-log?limit=10").then(r => r.json()).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setLiveAssets(assets);
+        setLiveServices(services);
+        setLivePending(approvals && approvals.length ? approvals[0] : null);
+        // Toast for any audit entry we haven't seen before.
+        const seen = seenAuditIdsRef.current;
+        const isFirstFetch = seen.size === 0;
+        for (const a of audit) {
+          if (a.id && !seen.has(a.id)) {
+            seen.add(a.id);
+            if (!isFirstFetch) {
+              pushToastSafe({
+                tone: a.simulated ? "indigo" : "green",
+                msg: a.result || `${a.action} ${a.target}`,
+                meta: a.simulated ? "simulated" : "executed",
+              });
+            }
+          }
+        }
+        setLiveAuditLog(audit);
+      } catch (e) {
+        // Best-effort polling; ignore transient errors.
+      }
+    };
+    tick();
+    const id = setInterval(tick, POLL_INTERVAL_MS);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
 
   // Util — schedule timers that get cleared on reset.
@@ -80,22 +173,44 @@ const App = () => {
     });
   }, [clearAllTimers, pushToast, schedule]);
 
-  const onApprove = useCallback(() => {
-    setEnvState("remediating");
-    pushToast({ tone: "indigo", msg: "Rolling back to abc123…", meta: "~30s" });
-    schedule(1400, () => {
-      pushToast({ tone: "indigo", msg: "Scaling memory 1 → 4 GiB…", meta: "~12s" });
-    });
-    schedule(2800, () => {
-      setEnvState("recovered");
-      pushToast({ tone: "green", msg: "Recovered. 1 asset re-queued.", meta: "PRB-7281 closed" });
-    });
-  }, [pushToast, schedule]);
+  const decideLive = useCallback(async (decision) => {
+    if (!livePending) return false;
+    try {
+      const resp = await fetch(`/api/approvals/${livePending.id}/decide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, decided_by: "operator@studio-control-room" }),
+      });
+      return resp.ok;
+    } catch (e) {
+      return false;
+    }
+  }, [livePending]);
 
-  const onReject = useCallback(() => {
+  const onApprove = useCallback(async () => {
+    setEnvState("remediating");
+    const planLabel = livePending ? livePending.id.slice(0, 8) : "pending";
+    pushToast({ tone: "indigo", msg: `Approving ${planLabel}…`, meta: "execute via agent" });
+    const ok = await decideLive("approved");
+    if (!ok) {
+      pushToast({ tone: "red", msg: "Approval failed", meta: "see console" });
+      return;
+    }
+    // The agent's HumanApprovalGate will see status=approved on its next poll,
+    // unblock, and call scale_service. The new audit_log entry surfaces via the
+    // polling tick above (with its own toast).
+    schedule(1400, () => setEnvState("recovered"));
+  }, [decideLive, livePending, pushToast, schedule]);
+
+  const onReject = useCallback(async () => {
     setEnvState("recovered");
-    pushToast({ tone: "neutral", msg: "Remediation rejected.", meta: "logged" });
-  }, [pushToast]);
+    const ok = await decideLive("rejected");
+    pushToast({
+      tone: ok ? "neutral" : "red",
+      msg: ok ? "Remediation rejected." : "Reject failed",
+      meta: "logged",
+    });
+  }, [decideLive, pushToast]);
 
   const reset = useCallback(() => {
     clearAllTimers();
@@ -116,26 +231,37 @@ const App = () => {
     return () => window.removeEventListener("keydown", handler);
   }, [envState, onApprove, onReject]);
 
-  // Derived: which asset is failing in the table during incident.
-  const failedAssetId = (envState !== "healthy" && envState !== "recovered") ? "b7e2" : null;
+  // LIVE: pending approval auto-opens the gate, overriding scripted envState.
+  const gateOpen = !!livePending || envState === "awaiting-approval";
+  const liveRemediation = mapApprovalToRemediation(livePending) || window.SF_REMEDIATION;
 
-  // Modify assets[0] progress under failure for visual feedback
-  const services = window.SF_SERVICES.map(s => {
+  // Pick a "failing" asset to highlight in the table:
+  //   prefer any asset whose state is failed/encoding when there's a live incident.
+  const baseAssets = (liveAssets && liveAssets.length) ? liveAssets : window.SF_ASSETS;
+  const failedAssetId = (() => {
+    if (envState === "healthy" || envState === "recovered") return null;
+    const failed = baseAssets.find(a => a.state === "failed");
+    if (failed) return failed.id;
+    const encoding = baseAssets.find(a => a.state === "encoding");
+    return encoding ? encoding.id : null;
+  })();
+
+  const services = (liveServices && liveServices.length ? liveServices : window.SF_SERVICES).map(s => {
     if (s.id !== "encode") return s;
-    if (envState === "healthy")                              return { ...s, health: "healthy",  count: 38, meta: "p99 14s" };
-    if (envState === "incident-detected" || envState === "agent-diagnosing" || envState === "awaiting-approval")
-                                                              return { ...s, health: "failing", count: 35, meta: "OOM" };
-    if (envState === "remediating")                          return { ...s, health: "degraded", count: 36, meta: "rolling back…" };
-    if (envState === "recovered")                            return { ...s, health: "healthy",  count: 39, meta: "p99 12s" };
+    if (envState === "healthy" && !gateOpen)                 return { ...s, health: "healthy" };
+    if (envState === "incident-detected" || envState === "agent-diagnosing" || gateOpen)
+                                                              return { ...s, health: "failing", meta: "OOM" };
+    if (envState === "remediating")                          return { ...s, health: "degraded", meta: "scaling…" };
+    if (envState === "recovered")                            return { ...s, health: "healthy" };
     return s;
   });
 
-  const selectedAsset = selectedId ? window.SF_ASSETS.find(a => a.id === selectedId) : null;
-  const incidentCount = (envState !== "healthy" && envState !== "recovered") ? 1 : 0;
-  const agentNavState = envState === "healthy" ? "idle"
+  const selectedAsset = selectedId ? baseAssets.find(a => a.id === selectedId) : null;
+  const incidentCount = (gateOpen || (envState !== "healthy" && envState !== "recovered")) ? 1 : 0;
+  const agentNavState = gateOpen ? "waiting"
+                      : envState === "healthy" ? "idle"
                       : envState === "recovered" ? "idle"
                       : envState === "remediating" ? "running"
-                      : envState === "awaiting-approval" ? "waiting"
                       : "diagnosing";
 
   return (
@@ -189,7 +315,7 @@ const App = () => {
               Assets in flight
             </h2>
             <span style={{ marginLeft: 6, font: "var(--sf-text-mono)", color: "rgba(255,255,255,0.42)" }}>
-              {window.SF_ASSETS.length} in pipeline
+              {baseAssets.length} in pipeline
             </span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
               <Button variant="ghost" size="sm">All</Button>
@@ -200,7 +326,7 @@ const App = () => {
           </div>
 
           <AssetTable
-            assets={window.SF_ASSETS}
+            assets={baseAssets}
             selectedId={selectedId}
             failedId={failedAssetId}
             onSelect={(id) => setSelectedId(prev => prev === id ? null : id)}
@@ -208,8 +334,8 @@ const App = () => {
         </main>
 
         <Inspector
-          envState={envState}
-          remediation={window.SF_REMEDIATION}
+          envState={gateOpen ? "awaiting-approval" : envState}
+          remediation={liveRemediation}
           toolLines={toolLines}
           selectedAsset={selectedAsset}
           onApprove={onApprove}
@@ -219,8 +345,8 @@ const App = () => {
       </div>
 
       <ApprovalGate
-        open={envState === "awaiting-approval"}
-        remediation={window.SF_REMEDIATION}
+        open={gateOpen}
+        remediation={liveRemediation}
         onApprove={onApprove}
         onReject={onReject}
       />

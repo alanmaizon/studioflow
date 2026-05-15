@@ -48,23 +48,24 @@ deploy_one() {
 }
 
 case "${1:-}" in
-  ingest|workflow|encode)
+  ingest|workflow|encode|frontend)
     deploy_one "$1"
     ;;
   all)
     deploy_one ingest
     deploy_one workflow
     deploy_one encode
+    deploy_one frontend
     ;;
   *)
-    echo "Usage: $0 {ingest|workflow|encode|all}" >&2
+    echo "Usage: $0 {ingest|workflow|encode|frontend|all}" >&2
     exit 2
     ;;
 esac
 
 echo
 echo "✅ Deploy complete. Service URLs:"
-for svc in ingest workflow encode; do
+for svc in ingest workflow encode frontend; do
   url=$(gcloud run services describe "${svc}-service" --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)' 2>/dev/null || echo "(not deployed)")
   printf "  %-10s %s\n" "$svc:" "$url"
 done

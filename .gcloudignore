@@ -58,3 +58,13 @@ test-assets/
 .DS_Store
 .vscode/
 .idea/
+
+# Aggressive venv exclusion — these can be 500MiB each in this repo.
+services/*/.venv/
+services/*/.venv/**
+**/.venv/
+**/.venv/**
+
+# Frontend extras the Cloud Build image doesn't need (keep ui_kits + colors_and_type.css only)
+frontend/screenshots/
+frontend/ui_kits/control_room/README.md

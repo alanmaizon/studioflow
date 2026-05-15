@@ -1,0 +1,33 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/frontend-service:${COMMIT_SHA}', '-f', 'services/frontend/Dockerfile', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/frontend-service:${COMMIT_SHA}']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'frontend-service'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/frontend-service:${COMMIT_SHA}'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--set-env-vars'
+      - 'PROJECT_ID=${PROJECT_ID},DEPLOYMENT_ENV=demo'
+      - '--set-secrets'
+      - 'DT_TENANT=dynatrace-tenant:latest,DYNATRACE_API_TOKEN=dynatrace-otlp-token:latest'
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/frontend-service:${COMMIT_SHA}'
+
+# deploy.sh sends a shared substitution set across all services; the frontend
+# doesn't use Pub/Sub. ALLOW_LOOSE prevents Cloud Build from rejecting unused
+# substitutions like _PUBSUB_TOPIC.
+options:
+  substitution_option: ALLOW_LOOSE
