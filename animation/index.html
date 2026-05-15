@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>StudioFlow - Interactive Presentation</title>
+    <style>
+        body { 
+            margin: 0; 
+            background: #000; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            overflow-x: hidden; 
+        }
+        ::-webkit-scrollbar { width: 0px; } /* hide scrollbar for clean presentation */
+        
+        #slides-container { 
+            position: fixed; 
+            inset: 0; 
+            pointer-events: none; 
+        }
+        .slide { 
+            position: absolute; 
+            inset: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            text-align: center; 
+            padding: 2rem; 
+            opacity: 0; 
+            will-change: opacity, transform;
+        }
+        
+        h1 { font-size: 5rem; margin-bottom: 1rem; background: linear-gradient(135deg, #5E5CE6, #0A84FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 3.5rem; margin-bottom: 2rem; color: #f2f2f2; }
+        h3 { font-size: 1.8rem; margin: 0 0 1rem 0; color: #0A84FF; }
+        p { font-size: 1.5rem; max-width: 800px; line-height: 1.5; color: rgba(255,255,255,0.7); }
+        
+        .stage { display: flex; gap: 1rem; margin-top: 2rem; }
+        .box { padding: 1.5rem 2rem; border-radius: 12px; background: #1c1c1e; border: 1px solid #333; font-weight: 600; font-size: 1.2rem; }
+        .box.active { border-color: #0A84FF; box-shadow: 0 0 20px rgba(10, 132, 255, 0.3); }
+        .box.error { border-color: #FF453A; box-shadow: 0 0 20px rgba(255, 69, 58, 0.3); color: #FF453A; }
+        
+        .scroll-hint { 
+            position: fixed; 
+            bottom: 2rem; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            color: rgba(255,255,255,0.4); 
+            font-size: 1rem; 
+            letter-spacing: 2px; 
+            text-transform: uppercase; 
+            animation: bounce 2s infinite; 
+            z-index: 100;
+        }
+        @keyframes bounce { 
+            0%, 100% { transform: translate(-50%, 0); } 
+            50% { transform: translate(-50%, -10px); } 
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-hint">Scroll down ↓</div>
+    <div id="slides-container">
+        <div class="slide">
+            <h1 data-speed="60">StudioFlow</h1>
+            <p data-speed="30">A simulated Apple-style media production pipeline running as event-driven microservices on Cloud Run, fully instrumented with OpenTelemetry exporting to Dynatrace.</p>
+        </div>
+        <div class="slide">
+            <h2 data-speed="70">The Pipeline</h2>
+            <p data-speed="40">Assets traverse through a distributed event-driven system.</p>
+            <div class="stage" data-speed="15">
+                <div class="box">Ingest</div>
+                <div class="box">Workflow</div>
+                <div class="box">Encode</div>
+                <div class="box">Enrichment</div>
+                <div class="box">Publish</div>
+            </div>
+        </div>
+        <div class="slide">
+            <h2 data-speed="80">The Incident</h2>
+            <p data-speed="50">A bad deploy enables 4K transcoding without scaling memory.</p>
+            <div class="stage" data-speed="20">
+                <div class="box">Workflow</div>
+                <div class="box error">Encode (OOM)</div>
+                <div class="box">Enrichment</div>
+            </div>
+            <p data-speed="5" style="margin-top:3rem; color: #FF453A; font-weight:bold;">Dynatrace surfaces a high-severity problem on the Encode service.</p>
+        </div>
+        <div class="slide">
+            <h2 data-speed="60">The Agent</h2>
+            <p data-speed="40">StudioFlow Agent (Gemini 3.1 Pro) steps in.<br>It reasons over observability data using the Dynatrace MCP.</p>
+            <div data-speed="15" style="margin-top:2rem; text-align:left; background:#1c1c1e; padding:2rem; border-radius:12px; font-family:monospace; color:#0A84FF; font-size:1.2rem; line-height:1.6; border: 1px solid #333;">
+                1. read_dynatrace_problems()<br>
+                2. fetch_spans(service="encode") -> oom_killed=true<br>
+                3. check_github_deploys() -> "+concurrency=8"
+            </div>
+        </div>
+        <div class="slide">
+            <h2 data-speed="70">Human in Control</h2>
+            <p data-speed="45">The Agent drafts a remediation plan and halts at the Human Approval Gate.</p>
+            <div data-speed="20" style="margin-top:2rem; padding: 2.5rem; background:rgba(10,132,255,0.05); border:1px solid #0A84FF; border-radius:12px; text-align:center;">
+                <h3>Proposed Action</h3>
+                <p style="font-size: 1.2rem; margin:1rem 0;">Rollback to `abc123` and scale memory to 4GiB.</p>
+                <div style="display:inline-block; background:#0A84FF; color:#fff; padding: 0.8rem 1.8rem; border-radius:2rem; margin-top:1rem; font-weight:600; text-transform:uppercase; letter-spacing:1px;">Approve Remediation</div>
+            </div>
+        </div>
+        <div class="slide">
+            <h2 data-speed="60">Recovery & Summary</h2>
+            <p data-speed="30">The operator approves. StudioFlow scales up, rolling back the bad commit. The pipeline turns green, and a post-incident summary is logged.</p>
+        </div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        // Set body height to allow scrolling based on number of slides
+        document.body.style.height = `${(slides.length) * 100}vh`;
+
+        function render() {
+            const scrollY = window.scrollY;
+            const wh = window.innerHeight;
+            // Determine our continuous scroll index (e.g. 1.5 means between slide 1 and 2)
+            const scrollIndex = scrollY / wh;
+
+            slides.forEach((slide, i) => {
+                const delta = i - scrollIndex;
+                
+                // If the slide is outside the viewport by more than 1.2 heights, hide it completely
+                if (Math.abs(delta) > 1.2) {
+                    slide.style.opacity = 0;
+                    slide.style.pointerEvents = 'none';
+                    return;
+                }
+
+                // Prevent overlap by translating the entire slide container vertically
+                slide.style.transform = `translateY(${delta * 100}vh)`;
+
+                // Opacity peaks at 1 when delta is 0, fading to 0 as delta approaches 1
+                const opacity = Math.max(0, 1 - Math.abs(delta));
+                slide.style.opacity = opacity;
+                slide.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
+
+                // Apply parallax effect to child elements
+                const elements = slide.querySelectorAll('[data-speed]');
+                elements.forEach(el => {
+                    const speed = parseFloat(el.getAttribute('data-speed'));
+                    // Calculate the vertical offset
+                    const yOffset = delta * speed;
+                    el.style.transform = `translateY(${yOffset}vh)`;
+                });
+            });
+            
+            // Fade out scroll hint as the user starts scrolling
+            const hint = document.querySelector('.scroll-hint');
+            if (hint) {
+                hint.style.opacity = Math.max(0, 1 - scrollIndex * 2);
+            }
+        }
+
+        window.addEventListener('scroll', render);
+        window.addEventListener('resize', render);
+        render(); // Run once to set initial state
+    </script>
+</body>
+</html>
