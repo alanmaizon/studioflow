@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Pipeline stages</title><link rel="stylesheet" href="_card.css"></head><body><div class="card" style="padding:18px;">
+  <div style="display:grid;grid-template-columns: repeat(4, 1fr);gap:10px;">
+    <!-- stage card -->
+    <div style="background:#1c1c1e;border-radius:14px;padding:14px;box-shadow:var(--sf-elev-1);">
+      <div class="row" style="justify-content:space-between;"><span class="label" style="color:var(--sf-fg-2)">Ingest</span><span class="dot" style="background:#30D158;"></span></div>
+      <div style="margin-top:8px;font:var(--sf-text-h2);letter-spacing:var(--sf-tracking-h2);color:var(--sf-fg-pure);">12</div>
+      <div class="mono" style="color:var(--sf-fg-2);margin-top:2px;">p99 · 1.2s</div>
+    </div>
+    <div style="background:#1c1c1e;border-radius:14px;padding:14px;box-shadow:var(--sf-elev-1);">
+      <div class="row" style="justify-content:space-between;"><span class="label" style="color:var(--sf-fg-2)">Transcode</span><span class="dot" style="background:#FF453A;"></span></div>
+      <div style="margin-top:8px;font:var(--sf-text-h2);letter-spacing:var(--sf-tracking-h2);color:#FF453A;">3 <span style="color:var(--sf-fg-3);font:var(--sf-text-caption-strong);">/ 8</span></div>
+      <div class="mono" style="color:#FF453A;margin-top:2px;">3 OOM · 47m</div>
+    </div>
+    <div style="background:#1c1c1e;border-radius:14px;padding:14px;box-shadow:var(--sf-elev-1);">
+      <div class="row" style="justify-content:space-between;"><span class="label" style="color:var(--sf-fg-2)">Enrichment</span><span class="dot" style="background:#FF9F0A;"></span></div>
+      <div style="margin-top:8px;font:var(--sf-text-h2);letter-spacing:var(--sf-tracking-h2);color:var(--sf-fg-pure);">5</div>
+      <div class="mono" style="color:var(--sf-fg-2);margin-top:2px;">p99 · 4.8s</div>
+    </div>
+    <div style="background:#1c1c1e;border-radius:14px;padding:14px;box-shadow:var(--sf-elev-1);">
+      <div class="row" style="justify-content:space-between;"><span class="label" style="color:var(--sf-fg-2)">Publish</span><span class="dot" style="background:#30D158;"></span></div>
+      <div style="margin-top:8px;font:var(--sf-text-h2);letter-spacing:var(--sf-tracking-h2);color:var(--sf-fg-pure);">461</div>
+      <div class="mono" style="color:var(--sf-fg-2);margin-top:2px;">p99 · 220ms</div>
+    </div>
+  </div>
+</div></body></html>

@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Buttons</title><link rel="stylesheet" href="_card.css">
+<style>
+  .btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 14px; border-radius:10px; font:var(--sf-text-caption-strong); border:1px solid transparent; cursor:pointer; }
+  .btn-primary { background:#0A84FF; color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,0.18); }
+  .btn-secondary { background:#1c1c1e; color:var(--sf-fg-1); box-shadow:var(--sf-elev-1); }
+  .btn-ghost { background:transparent; color:var(--sf-fg-1); }
+  .btn-destructive { background:#FF453A; color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,0.18); }
+  .btn-lg { height:40px; padding:0 18px; font:var(--sf-text-body-strong); border-radius:12px; }
+</style>
+</head><body><div class="card">
+  <div class="label">Buttons</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <button class="btn btn-primary">Approve</button>
+    <button class="btn btn-secondary">Reject</button>
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-destructive">Force fail</button>
+  </div>
+  <div class="label" style="margin-top:8px;">Large · gate actions</div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="btn btn-primary btn-lg">Approve remediation</button>
+    <button class="btn btn-secondary btn-lg">Reject</button>
+  </div>
+  <div class="label" style="margin-top:8px;">States · primary</div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="btn btn-primary">Default</button>
+    <button class="btn btn-primary" style="background:#2A95FF;">Hover</button>
+    <button class="btn btn-primary" style="background:#0974E0;filter:brightness(0.96);transform:translateY(0.5px);">Press</button>
+    <button class="btn btn-primary" style="opacity:0.4;">Disabled</button>
+    <button class="btn btn-primary" style="box-shadow:0 0 0 2px #000, 0 0 0 4px #0A84FF, inset 0 1px 0 rgba(255,255,255,0.18);">Focus</button>
+  </div>
+</div></body></html>

@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Tool stream</title><link rel="stylesheet" href="_card.css">
+<style>
+  .line { display:flex; gap:10px; align-items:flex-start; font:var(--sf-text-mono); padding:6px 0; border-bottom:1px solid var(--sf-border-subtle); }
+  .line:last-child { border-bottom:0; }
+  .tm { color:var(--sf-fg-3); flex:0 0 70px; }
+  .tool { color:#5E5CE6; }
+  .arg { color:var(--sf-fg-2); }
+  .ret { color:var(--sf-fg-1); }
+  .ok { color:#30D158;}
+</style>
+</head><body><div class="card">
+  <div class="label">Agent · live tool stream</div>
+  <div style="background:#1c1c1e;border-radius:14px;box-shadow:var(--sf-elev-1);padding:10px 14px;">
+    <div class="line"><span class="tm">14:32:14</span><span class="tool">dynatrace.list_problems</span><span class="arg">(now-1h)</span><span class="ok">→ 1</span></div>
+    <div class="line"><span class="tm">14:32:16</span><span class="tool">dynatrace.get_problem</span><span class="arg">(PRB-7281)</span><span class="ok">→ encode · OOM</span></div>
+    <div class="line"><span class="tm">14:32:19</span><span class="tool">dynatrace.dql</span><span class="arg">("fetch spans, filter service.name=encode")</span><span class="ok">→ 47 spans</span></div>
+    <div class="line"><span class="tm">14:32:23</span><span class="tool">git.deploy_history</span><span class="arg">(--service encode --since=2h)</span><span class="ok">→ 2 deploys</span></div>
+    <div class="line"><span class="tm">14:32:25</span><span class="tool">approval_gate.request</span><span class="arg">(plan=rollback+scale)</span><span style="color:#FF9F0A">→ waiting</span></div>
+  </div>
+</div></body></html>

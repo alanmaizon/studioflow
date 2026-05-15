@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Agent tool calls</title><link rel="stylesheet" href="_card.css"></head><body><div class="card" style="padding:18px;">
+  <div style="background:#1c1c1e;border-radius:18px;padding:16px 18px;box-shadow:var(--sf-elev-1);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <span class="dot" style="background:#5E5CE6;"></span>
+      <span style="font:var(--sf-text-h3);color:var(--sf-fg-1);">Tool calls</span>
+      <span class="mono" style="color:var(--sf-fg-3);margin-left:auto;">4 / 4 · 3.2s</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:grid;grid-template-columns: 14px 1fr auto;align-items:center;gap:10px;font:var(--sf-text-mono);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+        <span style="color:var(--sf-fg-1);">dynatrace.<span style="color:#5E5CE6;">list_problems</span>(severity=<span style="color:#FF9F0A">CRITICAL</span>)</span>
+        <span style="color:var(--sf-fg-3);">412ms</span>
+      </div>
+      <div style="display:grid;grid-template-columns: 14px 1fr auto;align-items:center;gap:10px;font:var(--sf-text-mono);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+        <span style="color:var(--sf-fg-1);">dynatrace.<span style="color:#5E5CE6;">get_traces</span>(service=<span style="color:#0A84FF">"encode"</span>, window=<span style="color:#0A84FF">"1h"</span>)</span>
+        <span style="color:var(--sf-fg-3);">1.1s</span>
+      </div>
+      <div style="display:grid;grid-template-columns: 14px 1fr auto;align-items:center;gap:10px;font:var(--sf-text-mono);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+        <span style="color:var(--sf-fg-1);">git.<span style="color:#5E5CE6;">deploys</span>(repo=<span style="color:#0A84FF">"studioflow"</span>, since=<span style="color:#0A84FF">"2h"</span>)</span>
+        <span style="color:var(--sf-fg-3);">680ms</span>
+      </div>
+      <div style="display:grid;grid-template-columns: 14px 1fr auto;align-items:center;gap:10px;font:var(--sf-text-mono);">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#FF9F0A;animation:pulse 1.2s ease-in-out infinite;"></span>
+        <span style="color:var(--sf-fg-1);">human.<span style="color:#5E5CE6;">approval_gate</span>(plan=…)</span>
+        <span style="color:#FF9F0A;">waiting</span>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes pulse {0%,100%{opacity:1}50%{opacity:0.35}}</style>
+</div></body></html>

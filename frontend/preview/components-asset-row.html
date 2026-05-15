@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Asset row</title><link rel="stylesheet" href="_card.css">
+<style>
+  .row-asset { display:grid; grid-template-columns: 96px 1fr 110px 90px 110px; gap:16px; align-items:center; padding:10px 14px; background:#1c1c1e; border-radius:14px; box-shadow:var(--sf-elev-1); }
+  .poster { width:96px; height:54px; border-radius:6px; background:linear-gradient(135deg,#2c2c2e,#1c1c1e); position:relative; overflow:hidden; }
+  .poster::after { content:""; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), transparent 55%);}
+  .ttl { font:var(--sf-text-body-strong); color:var(--sf-fg-1); }
+  .sub { font:var(--sf-text-caption); color:var(--sf-fg-2); font-family:var(--sf-font-mono); }
+  .pill-lg { padding:3px 10px; font:var(--sf-text-micro); letter-spacing:0.06em; text-transform:uppercase; border-radius:999px; border:1px solid; display:inline-flex; align-items:center; }
+  .prog { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;}
+  .prog > i { display:block; height:100%; background:#FF9F0A; }
+</style>
+</head><body><div class="card">
+  <div class="label">Asset rows · pipeline list</div>
+  <div class="col" style="gap:6px;">
+    <div class="row-asset">
+      <div class="poster" style="background:linear-gradient(135deg,#3a3a3c,#1c1c1e);"></div>
+      <div class="col" style="gap:2px;"><span class="ttl">S03E04 · Cold open</span><span class="sub">asset_a8f1 · 4.2 GiB · prores</span></div>
+      <span class="pill-lg" style="background:var(--sf-status-amber-fill);border-color:var(--sf-status-amber-border);color:#FF9F0A;">Encoding</span>
+      <div class="col" style="gap:6px;"><span class="sub" style="color:var(--sf-fg-1)">38%</span><div class="prog"><i style="width:38%"></i></div></div>
+      <span class="sub">14:32 · 12m</span>
+    </div>
+    <div class="row-asset">
+      <div class="poster" style="background:linear-gradient(135deg,#FF453A20,#1c1c1e);"></div>
+      <div class="col" style="gap:2px;"><span class="ttl">S03E05 · Title sequence</span><span class="sub">asset_b7e2 · 5.8 GiB · prores</span></div>
+      <span class="pill-lg" style="background:var(--sf-status-red-fill);border-color:var(--sf-status-red-border);color:#FF453A;">Failed</span>
+      <span class="sub" style="color:#FF453A">OOM · 3/3</span>
+      <span class="sub">14:18 · 14m</span>
+    </div>
+    <div class="row-asset">
+      <div class="poster" style="background:linear-gradient(135deg,#30D15820,#1c1c1e);"></div>
+      <div class="col" style="gap:2px;"><span class="ttl">S03E03 · Final mix</span><span class="sub">asset_c4d9 · 3.1 GiB · h264</span></div>
+      <span class="pill-lg" style="background:var(--sf-status-green-fill);border-color:var(--sf-status-green-border);color:#30D158;">Published</span>
+      <span class="sub">2 outputs</span>
+      <span class="sub">13:47 · 1h</span>
+    </div>
+  </div>
+</div></body></html>

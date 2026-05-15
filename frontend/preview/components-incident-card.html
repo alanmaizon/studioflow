@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Incident card</title><link rel="stylesheet" href="_card.css">
+<style>
+  .card2 { background:rgba(28,28,30,0.78); backdrop-filter:saturate(180%) blur(40px); border-radius:18px; box-shadow:var(--sf-elev-3); padding:18px; }
+  .hdr { display:flex; align-items:center; gap:10px; }
+  .pill-lg { padding:3px 10px; font:var(--sf-text-micro); letter-spacing:0.06em; text-transform:uppercase; border-radius:999px; border:1px solid; }
+  .ev { font:var(--sf-text-mono); color:var(--sf-fg-2); }
+  .ev b { color:var(--sf-fg-1); font-weight:600; }
+  .ev a { color:#0A84FF; text-decoration:none; }
+  .actions { display:flex; gap:8px; margin-top:14px; }
+  .btn { display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;font:var(--sf-text-caption-strong);border:0;cursor:pointer; }
+  .btn-primary { background:#0A84FF;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,0.18); }
+  .btn-secondary { background:#2c2c2e;color:var(--sf-fg-1);box-shadow:var(--sf-elev-1); }
+</style>
+</head><body><div class="card">
+  <div class="card2">
+    <div class="hdr">
+      <span class="dot" style="background:#5E5CE6;box-shadow:0 0 12px #5E5CE6;"></span>
+      <span style="font:var(--sf-text-micro);letter-spacing:0.06em;text-transform:uppercase;color:#5E5CE6;">Agent · proposed</span>
+      <span class="meta" style="margin-left:auto;font-family:var(--sf-font-mono);">12s ago · confidence 0.86</span>
+    </div>
+    <div style="font:var(--sf-text-h2);letter-spacing:-0.005em;color:var(--sf-fg-pure);margin-top:8px;">Rollback <span style="font-family:var(--sf-font-mono);font-weight:500;">encode</span> to <span style="font-family:var(--sf-font-mono);font-weight:500;">abc123</span> &amp; scale memory 1→4 GiB</div>
+    <div style="font:var(--sf-text-body);color:var(--sf-fg-2);margin-top:8px;">Hypothesis: OOM under 4K concurrency. Correlated with the <span style="font-family:var(--sf-font-mono);color:var(--sf-fg-1)">enable-4k</span> deploy 47 minutes ago.</div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;">
+      <div class="ev">· trace <a>7d92f1a3</a> · <b>oom_killed=true</b> · 14:32:08 UTC+01</div>
+      <div class="ev">· trace <a>a4e5b1c0</a> · rss <b>3.94 GiB / 4.00 GiB</b> · 14:34:51 UTC+01</div>
+      <div class="ev">· commit <a>abc123</a> · enable-4k · +concurrency=8</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary">Approve remediation</button>
+      <button class="btn btn-secondary">Reject</button>
+      <button class="btn btn-secondary" style="background:transparent;box-shadow:none;color:var(--sf-fg-2);">View 3 traces</button>
+    </div>
+  </div>
+</div></body></html>

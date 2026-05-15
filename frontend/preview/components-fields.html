@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Form fields</title><link rel="stylesheet" href="_card.css">
+<style>
+  .field { display:flex;flex-direction:column;gap:6px; }
+  .field-label { font:var(--sf-text-caption-strong);color:var(--sf-fg-2); }
+  .input { background:#1c1c1e;color:var(--sf-fg-1);font:var(--sf-text-body);padding:9px 12px;border-radius:10px;border:none;box-shadow:inset 0 0 0 1px var(--sf-border);outline:none;}
+  .input::placeholder { color:var(--sf-fg-3); }
+  .input:focus { box-shadow: inset 0 0 0 1px rgba(10,132,255,0.6), 0 0 0 3px rgba(10,132,255,0.25); }
+  .search { position:relative; }
+  .search svg { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sf-fg-3); }
+  .search input { padding-left:32px;width:100%;box-sizing:border-box; }
+  .select { background:#1c1c1e;color:var(--sf-fg-1);font:var(--sf-text-body);padding:9px 30px 9px 12px;border-radius:10px;border:none;box-shadow:inset 0 0 0 1px var(--sf-border);appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2'><path d='M2 4l4 4 4-4'/></svg>");background-repeat:no-repeat;background-position:right 10px center;}
+</style></head><body><div class="card">
+  <div class="grid" style="grid-template-columns: 1.4fr 1fr 1fr;gap:14px;">
+    <div class="field search">
+      <span class="field-label">Search</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="input" placeholder="Search assets, traces, commits…">
+    </div>
+    <div class="field">
+      <span class="field-label">Service</span>
+      <select class="select"><option>encode</option><option>workflow</option><option>ingest</option></select>
+    </div>
+    <div class="field">
+      <span class="field-label">Time range</span>
+      <select class="select"><option>Last 1 hour</option><option>Last 24 hours</option></select>
+    </div>
+  </div>
+  <div class="meta">Inputs use inset 1px border; focus replaces inner border with 60% accent + 3px halo at 25%.</div>
+</div></body></html>

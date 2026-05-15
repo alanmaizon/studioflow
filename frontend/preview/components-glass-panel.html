@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Glass panel</title><link rel="stylesheet" href="_card.css">
+</head><body><div class="card" style="background:#000;padding:24px;">
+  <!-- Pretend wallpaper to show glass effect -->
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 20%, rgba(10,132,255,0.12), transparent 50%), radial-gradient(ellipse at 80% 60%, rgba(94,92,230,0.10), transparent 55%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:1;display:flex;gap:16px;">
+    <!-- Solid card -->
+    <div style="flex:1;background:#1c1c1e;border-radius:18px;box-shadow:var(--sf-elev-1);padding:16px;">
+      <div class="label" style="margin-bottom:10px;">Solid surface · 1c1c1e</div>
+      <div style="font:var(--sf-text-h3);color:var(--sf-fg-1);">Encode service</div>
+      <div style="font:var(--sf-text-caption);color:var(--sf-fg-2);">3 instances · 4 GiB</div>
+    </div>
+    <!-- Glass card -->
+    <div style="flex:1;background:rgba(28,28,30,0.6);backdrop-filter:saturate(180%) blur(40px);-webkit-backdrop-filter:saturate(180%) blur(40px);border-radius:18px;box-shadow:var(--sf-elev-3);padding:16px;">
+      <div class="label" style="margin-bottom:10px;color:#5E5CE6;">Glass · floats over content</div>
+      <div style="font:var(--sf-text-h3);color:var(--sf-fg-1);">Agent · diagnosing</div>
+      <div style="font:var(--sf-text-caption);color:var(--sf-fg-2);">12s elapsed · 4 tool calls</div>
+    </div>
+  </div>
+</div></body></html>

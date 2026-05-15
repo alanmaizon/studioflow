@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Status pills</title><link rel="stylesheet" href="_card.css">
+<style>
+  .pill-lg { padding:5px 12px; font:var(--sf-text-micro); letter-spacing:0.06em; text-transform:uppercase; border-radius:999px; border:1px solid; display:inline-flex; align-items:center; gap:6px;}
+</style>
+</head><body><div class="card">
+  <div class="label">Asset state pills</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span class="pill-lg" style="background:var(--sf-status-neutral-fill);border-color:var(--sf-status-neutral-border);color:var(--sf-fg-1);">Ingested</span>
+    <span class="pill-lg" style="background:var(--sf-status-amber-fill);border-color:var(--sf-status-amber-border);color:#FF9F0A;">Encoding</span>
+    <span class="pill-lg" style="background:var(--sf-status-indigo-fill);border-color:var(--sf-status-indigo-border);color:#5E5CE6;">Enriching</span>
+    <span class="pill-lg" style="background:var(--sf-status-neutral-fill);border-color:var(--sf-status-neutral-border);color:var(--sf-fg-1);">Review</span>
+    <span class="pill-lg" style="background:var(--sf-status-green-fill);border-color:var(--sf-status-green-border);color:#30D158;">Published</span>
+    <span class="pill-lg" style="background:var(--sf-status-red-fill);border-color:var(--sf-status-red-border);color:#FF453A;">Failed</span>
+  </div>
+  <div class="label" style="margin-top:8px;">With status dot · service health</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;color:var(--sf-fg-1);font:var(--sf-text-caption);">
+    <span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:#30D158;"></span>ingest · healthy</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:#FF9F0A;"></span>workflow · degraded</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:#FF453A;"></span>encode · failing</span>
+    <span style="display:inline-flex;align-items:center;gap:6px;"><span class="dot" style="background:#5E5CE6;"></span>agent · diagnosing</span>
+  </div>
+</div></body></html>
