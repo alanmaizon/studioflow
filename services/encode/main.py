@@ -125,15 +125,13 @@ def handle_pubsub_message(envelope: PubSubMessage):
             # Dynatrace records error spans normally and Davis detects the
             # error-rate anomaly. The agent uses the boom.oom_killed=true
             # attribute as evidence.
-            # Read the LIVE counter (not the stale joined_at snapshot) so we see
-            # the wave of concurrent threads that joined after us.
-            # CPython int reads are atomic; no lock needed for a read.
+            # Trigger fires deterministically on file size. The concurrent count
+            # is recorded as telemetry color (so the agent can correlate), but the
+            # threshold is file-only because Cloud Run's LB rate limiting at this
+            # tier makes "concurrent > N" un-testable. Narrative still holds:
+            # large 4K source = memory pressure during transcode.
             live_active = active_encodes
-            logger.info(
-                "ENC threshold-check: asset=%s file_size=%d joined_at=%d live_active=%d",
-                asset_id, file_size, joined_at, live_active,
-            )
-            if file_size > (500 * 1024 * 1024) and live_active > 1:
+            if file_size > (500 * 1024 * 1024):
                 span.set_attribute("boom.oom_killed", True)
                 span.set_attribute("boom.reason", "MEMORY_LEAK_scripted")
                 span.set_attribute("encode.file_size_bytes", file_size)
