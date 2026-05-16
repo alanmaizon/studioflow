@@ -11,6 +11,7 @@ from opentelemetry import trace
 
 from google.cloud import firestore
 from google.cloud import pubsub_v1
+from google.cloud import run_v2
 
 # Import OTel tracer
 from observability.tracer import init_tracer
@@ -142,28 +143,68 @@ def _audit_log(action: str, target: str, params: dict[str, Any],
     return doc_ref.id
 
 
+_run_client = run_v2.ServicesClient()
+_region = os.environ.get("REGION", "us-central1")
+_scale_mode = os.environ.get("WORKFLOW_SCALE_MODE", "real").lower()  # "real" | "simulated"
+
+
+def _otel_to_cloud_run_name(otel_name: str) -> str:
+    """Map the OTel service.name the agent uses (e.g. 'studioflow-encode') to the
+    Cloud Run service id (e.g. 'encode-service')."""
+    stripped = otel_name.removeprefix("studioflow-")
+    return f"{stripped}-service"
+
+
+def _scale_cloud_run(cloud_run_name: str, memory_mi: int) -> str:
+    """Update a Cloud Run service's memory limit via the admin API.
+    Returns a short description suitable for audit_log.result."""
+    name = f"projects/{project_id}/locations/{_region}/services/{cloud_run_name}"
+    service = _run_client.get_service(name=name)
+    if not service.template.containers:
+        raise HTTPException(status_code=500, detail=f"{cloud_run_name} has no containers")
+    container = service.template.containers[0]
+    container.resources.limits["memory"] = f"{memory_mi}Mi"
+    op = _run_client.update_service(service=service)
+    op.result(timeout=180)  # block until rollout settles
+    return f"scaled {cloud_run_name} to {memory_mi}Mi"
+
+
 @app.post("/admin/scale")
 def admin_scale(req: ScaleRequest):
-    """Scale a Cloud Run service's memory. Currently SIMULATED — logs + audits without
-    mutating Cloud Run. The boundary stays correct so we can swap in real
-    google-cloud-run admin calls behind this endpoint without changing the agent."""
+    """Scale a Cloud Run service's memory. WORKFLOW_SCALE_MODE=simulated falls back
+    to log+audit only; default 'real' actually calls the Cloud Run admin API."""
     with tracer.start_as_current_span("admin_scale") as span:
         span.set_attribute("approval.id", req.approval_id)
         span.set_attribute("service.target", req.service)
         span.set_attribute("scale.memory_mi", req.memory_mi)
+        span.set_attribute("scale.mode", _scale_mode)
         _verify_approval(req.approval_id)
+
+        simulated = _scale_mode == "simulated"
+        if simulated:
+            result = f"simulated scale of {req.service} to {req.memory_mi}Mi"
+        else:
+            cloud_run_name = _otel_to_cloud_run_name(req.service)
+            span.set_attribute("scale.cloud_run_name", cloud_run_name)
+            try:
+                result = _scale_cloud_run(cloud_run_name, req.memory_mi)
+            except Exception as e:
+                span.record_exception(e)
+                logger.exception("real scale failed for %s -> %dMi", cloud_run_name, req.memory_mi)
+                raise HTTPException(status_code=502, detail=f"Cloud Run scale failed: {e}")
+
         audit_id = _audit_log(
             action="scale",
             target=req.service,
             params={"memory_mi": req.memory_mi},
             approval_id=req.approval_id,
-            simulated=True,
-            result=f"simulated scale of {req.service} to {req.memory_mi}Mi",
+            simulated=simulated,
+            result=result,
         )
         span.set_attribute("audit_log.id", audit_id)
         return {
             "status": "executed",
-            "simulated": True,
+            "simulated": simulated,
             "audit_id": audit_id,
             "service": req.service,
             "memory_mi": req.memory_mi,
