@@ -38,39 +38,67 @@ Full shot list in [docs/demo-script.md](./docs/demo-script.md).
 
 ## Architecture
 
-```
-                  ┌────────────────────────────────────────────────────┐
-                  │       Studio Control Room (Next.js-style UI)        │
-                  │  https://frontend-service-vb6z2eah4a-uc.a.run.app   │
-                  │  reads assets/, approvals/, audit_log/ from Firestore│
-                  │  approve/reject buttons → POST /api/approvals/{id}  │
-                  └────────────────────────────────────────────────────┘
-                                       │
-                          ┌────────────┼─────────────┐
-                          ▼            ▼             ▼
-       ┌──────────┐  Pub/Sub   ┌────────────┐ Pub/Sub  ┌──────────────┐
-       │  ingest  │ ─────────▶ │  workflow  │ ────────▶│  encode      │
-       │ FastAPI  │            │ state mach.│          │ ffmpeg + OOM │
-       └─────┬────┘            │ + /admin/* │          │ trigger      │
-             │                 └─────┬──────┘          └──────┬───────┘
-             ▼                       ▼                        ▼
-         Firestore                Firestore                 Cloud Storage
-                                                                │
-       ───── OpenTelemetry SDK → OTLP HTTP → Dynatrace Grail ───┘
-                                                            ▲
-                                                            │ MCP (HTTPS Bearer)
-                                                            │
-       ┌────────────────────────────────────────────────────┴───────────┐
-       │              StudioFlow Agent (Cloud Run + ADK)                 │
-       │  https://agent-service-vb6z2eah4a-uc.a.run.app/diagnose         │
-       │                                                                 │
-       │   Gemini 3.1 Pro Preview (Vertex AI global endpoint)            │
-       │      │                                                          │
-       │      ├── Dynatrace MCP toolset (query-problems, execute-dql,    │
-       │      │   create-dql, get-entity-*, find-documents, ...)         │
-       │      ├── request_remediation_approval — blocks until human OK   │
-       │      └── scale_service — POSTs to workflow /admin/scale         │
-       └─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+  classDef ui fill:#1f2937,stroke:#60a5fa,color:#fff
+  classDef svc fill:#0b1d2a,stroke:#22d3ee,color:#fff
+  classDef store fill:#0f1d12,stroke:#34d399,color:#fff
+  classDef obs fill:#2b1d1d,stroke:#f87171,color:#fff
+  classDef agent fill:#1e1b2e,stroke:#a78bfa,color:#fff
+
+  subgraph UI[" "]
+    direction TB
+    Front[Studio Control Room<br/>frontend-service · FastAPI + React]
+  end
+
+  subgraph Pipeline[Pipeline · Cloud Run]
+    direction LR
+    Ingest[ingest-service]
+    Workflow[workflow-service<br/>state machine · /admin/scale]
+    Encode[encode-service<br/>ffmpeg · MEMORY_LEAK trigger]
+  end
+
+  subgraph State[Managed state]
+    direction TB
+    FS[(Firestore<br/>assets · approvals · audit_log)]
+    GCS[(Cloud Storage<br/>source + 720p)]
+  end
+
+  subgraph Obs[Observability]
+    Dyna[(Dynatrace Grail)]
+  end
+
+  subgraph Agent[StudioFlow Agent · Cloud Run + ADK]
+    direction TB
+    Brain[Gemini 3.1 Pro Preview<br/>Vertex AI · location=global]
+    Brain --> MCP[Dynatrace MCP toolset]
+    Brain --> Approve[request_remediation_approval<br/>blocks until human decides]
+    Brain --> Scale[scale_service]
+  end
+
+  Front -->|reads collections| FS
+  Front -->|approve/reject| FS
+
+  Ingest -- Pub/Sub --> Workflow
+  Workflow -- Pub/Sub --> Encode
+  Ingest --> GCS
+  Ingest --> FS
+  Workflow --> FS
+  Encode --> GCS
+
+  Ingest -. OTLP HTTP .-> Dyna
+  Workflow -. OTLP HTTP .-> Dyna
+  Encode -. OTLP HTTP .-> Dyna
+
+  MCP -. MCP / HTTPS Bearer .-> Dyna
+  Approve -- polls --> FS
+  Scale -- POST /admin/scale --> Workflow
+
+  class Front ui
+  class Ingest,Workflow,Encode svc
+  class FS,GCS store
+  class Dyna obs
+  class Brain,MCP,Approve,Scale agent
 ```
 
 Details: [docs/architecture.md](./docs/architecture.md), [CLAUDE.md](./CLAUDE.md) §4.

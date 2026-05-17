@@ -45,6 +45,7 @@ const Sidebar = ({ active = "overview", incidentCount = 0, agentState = "idle", 
       borderRight: "1px solid rgba(255,255,255,0.06)",
       padding: "16px 12px",
       display: "flex", flexDirection: "column", gap: 18,
+      minHeight: 0, overflowY: "auto",
     }}>
       {item("overview",  "Overview",  "monitor")}
       {item("incidents", "Incidents", "alert", incidentCount, "red")}

@@ -8,7 +8,7 @@ const Inspector = ({ envState, remediation, toolLines, selectedAsset, onApprove,
       width: 380, flex: "0 0 380px",
       padding: "0 24px 24px 0",
       display: "flex", flexDirection: "column", gap: 12,
-      overflowY: "auto",
+      minHeight: 0, overflowY: "auto",
     }}>
       {showAgent && (
         <>

@@ -323,7 +323,7 @@ const App = () => {
                       : "diagnosing";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#000", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100vh", overflow: "hidden", background: "#000", display: "flex", flexDirection: "column" }}>
       <TopBar
         envState={envState}
         time={time}
@@ -340,11 +340,12 @@ const App = () => {
           agentState={agentNavState}
         />
 
-        {/* Main content */}
+        {/* Main content — scrolls vertically when content exceeds row height */}
         <main style={{
-          flex: 1, minWidth: 0,
+          flex: 1, minWidth: 0, minHeight: 0,
           padding: "24px 24px 32px",
           display: "flex", flexDirection: "column", gap: 16,
+          overflowY: "auto",
         }}>
           {/* Page header */}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
